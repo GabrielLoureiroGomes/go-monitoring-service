@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,7 +26,7 @@ func main() {
 		case 1:
 			startMonitoring()
 		case 2:
-			fmt.Println("Exibindo logs...")
+			readLog()
 		case 0:
 			fmt.Println("Saindo do programa...")
 			os.Exit(0)
@@ -37,6 +39,7 @@ func main() {
 }
 
 func showMenu() {
+	fmt.Println("")
 	fmt.Println("1 - Iniciar monitoramento")
 	fmt.Println("2 - Exibir logs")
 	fmt.Println("0 - Sair do programa")
@@ -50,6 +53,7 @@ func scanCommand() int {
 }
 
 func startMonitoring() {
+	fmt.Println("")
 	fmt.Println("Iniciando monitoramento...")
 	sites := readTxtFileAndReturnValues()
 
@@ -58,7 +62,7 @@ func startMonitoring() {
 
 		for i, site := range sites {
 			fmt.Println(i, "- Nome do site:", site)
-			testaSite(site)
+			testSite(site)
 		}
 		time.Sleep(delay * time.Second)
 
@@ -66,7 +70,7 @@ func startMonitoring() {
 
 }
 
-func testaSite(site string) {
+func testSite(site string) {
 
 	resp, err := http.Get(site)
 
@@ -75,8 +79,10 @@ func testaSite(site string) {
 	}
 
 	if resp.StatusCode == 200 {
+		writeLog(site, true)
 		fmt.Println("Site:", site, "está funcionando corretamente!")
 	} else {
+		writeLog(site, false)
 		fmt.Println("Site:", site, "está fora do ar! Status Code:", resp.StatusCode)
 	}
 }
@@ -105,5 +111,33 @@ func readTxtFileAndReturnValues() []string {
 
 	}
 
+	file.Close()
+
 	return sites
+}
+
+func writeLog(site string, status bool) {
+
+	file, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro", err)
+	}
+
+	file.WriteString(time.Now().Format("02/01/2006 15:04:05") + " - O site " + site + " está funcionando corretamente e o status da requisição foi: " + strconv.FormatBool(status) + "\n")
+
+	file.Close()
+}
+
+func readLog() {
+
+	fmt.Println("Exibindo logs...")
+
+	file, err := ioutil.ReadFile("log.txt")
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro", err)
+	}
+
+	fmt.Println(string(file))
 }
